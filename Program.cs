@@ -1,5 +1,7 @@
-
+using LyricsWeb.Data;
+using LyricsWeb.Data.Service;
 using LyricsWeb.Service;
+using Microsoft.EntityFrameworkCore;
 
 namespace LyricsWeb
 {
@@ -8,11 +10,12 @@ namespace LyricsWeb
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
             // Add services to the container.
-
+            builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(connectionString));
             builder.Services.AddControllers();
             builder.Services.AddScoped<ILyricsCoverService, LyricsCoverService>();
+            builder.Services.AddScoped<IDataService, DataService>();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
 
