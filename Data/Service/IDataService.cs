@@ -9,6 +9,8 @@ namespace LyricsWeb.Data.Service
 
         public Task<SongItem?> GetItem(SongItem item);
 
+        public Task<SongItem?> GetCoverItem(SongItem item);
+
         public Task AddItem(SongItem item);
 
         public Task UpdateItem(SongItem item);

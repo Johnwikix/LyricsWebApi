@@ -1,20 +1,65 @@
-﻿using System.Threading;
-using LyricsWeb.APIs.CloudMusicAPI;
+﻿using LyricsWeb.APIs.CloudMusicAPI;
 using LyricsWeb.Data.Service;
 using LyricsWeb.Model;
+using System.Security.Cryptography;
+using System.Threading;
 
 namespace LyricsWeb.Service
 {
     public class LyricsCoverService : ILyricsCoverService
     {
         private readonly IDataService _dataService;
-        public LyricsCoverService(IDataService dataService)
+        private readonly IWebHostEnvironment _env;
+        private readonly string _coverCachePath;
+        public LyricsCoverService(IDataService dataService, IWebHostEnvironment env)
         {
             _dataService = dataService;
+            _env = env;
+            _coverCachePath = Path.Combine(_env.ContentRootPath, "CoverCache");
+            Directory.CreateDirectory(_coverCachePath);
         }
         public async Task<byte[]> GetCover(SongInfo songInfo, CancellationToken cancellationToken = default)
         {
-            return await CloudMusicSearchHelper.GetSongAlbum(songInfo.Title, songInfo.Album, songInfo.Artist);
+            var songItem = new SongItem
+            {
+                Title = songInfo.Title,
+                Album = songInfo.Album,
+                Artist = songInfo.Artist
+            };
+
+            var localItem = await _dataService.GetCoverItem(songItem);
+
+            if (localItem != null && !string.IsNullOrEmpty(localItem.CoverPath))
+            {
+                var fullPath = Path.Combine(_coverCachePath, localItem.CoverPath);
+                if (File.Exists(fullPath))
+                {
+                    return await File.ReadAllBytesAsync(fullPath, cancellationToken);
+                }
+            }
+
+            var coverBytes = await CloudMusicSearchHelper.GetSongAlbum(
+                songInfo.Title, songInfo.Album, songInfo.Artist);
+
+            if (coverBytes != null && coverBytes.Length > 0)
+            {
+                var fileHash = GetSha256Hash(coverBytes);
+                var fileName = $"{fileHash}.jpg";
+                var fullPath = Path.Combine(_coverCachePath, fileName);
+                await File.WriteAllBytesAsync(fullPath, coverBytes, cancellationToken);
+                if (localItem == null)
+                {
+                    songItem.CoverPath = fileName;
+                    await _dataService.AddItem(songItem);
+                }
+                else
+                {
+                    localItem.CoverPath = fileName;
+                    await _dataService.UpdateItem(localItem);
+                }
+            }
+
+            return coverBytes;
         }
 
         public async Task<string> GetLyrics(SongInfo songInfo, CancellationToken cancellationToken = default)
@@ -46,6 +91,13 @@ namespace LyricsWeb.Service
                 }
                 return res;
             }            
+        }
+
+        private static string GetSha256Hash(byte[] bytes)
+        {
+            using var sha256 = SHA256.Create();
+            var hash = sha256.ComputeHash(bytes);
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }
     }
 }
