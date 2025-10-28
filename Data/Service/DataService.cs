@@ -30,17 +30,17 @@ namespace LyricsWeb.Data.Service
 
         public async Task<SongItem?> GetCoverItem(SongItem item)
         {
-            if (!string.IsNullOrEmpty(item.Album))
-            {
-                var coverCacheItem = await _context.SongItems
-                    .FirstOrDefaultAsync(i =>
-                        i.Album == item.Album &&
-                        !string.IsNullOrEmpty(i.CoverPath));
-                if (coverCacheItem != null)
-                {
-                    return coverCacheItem;
-                }
-            }
+            //if (!string.IsNullOrEmpty(item.Album))
+            //{
+            //    var coverCacheItem = await _context.SongItems
+            //        .FirstOrDefaultAsync(i =>
+            //            i.Album == item.Album &&
+            //            !string.IsNullOrEmpty(i.CoverPath));
+            //    if (coverCacheItem != null)
+            //    {
+            //        return coverCacheItem;
+            //    }
+            //}
             var exactMatchItem = await _context.SongItems
                 .FirstOrDefaultAsync(i =>
                     (string.IsNullOrEmpty(item.Title) || i.Title == item.Title) &&
